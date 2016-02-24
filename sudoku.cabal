@@ -15,8 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                     , Solver
+  exposed-modules:     Solver
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , vector
@@ -40,6 +39,7 @@ test-suite sudoku-test
                      , hspec
                      , vector
                      , containers
+                     , mtl
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

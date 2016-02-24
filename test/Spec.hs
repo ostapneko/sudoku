@@ -1,49 +1,59 @@
 import Test.Hspec
-import Lib
 import Solver
 import qualified Data.Vector as V
+import Data.Vector ((!), (//))
 import qualified Data.Set as S
+import Control.Monad.Trans
 
 main :: IO ()
 main = hspec $ do
-  describe "isValid" $ do
-    it "returns true iff the group contains all the numbers from 1 to 9" $ do
-      (group 1 2 3 8 4 9 5 7 6) `shouldSatisfy` isValid
-      (group 1 1 3 8 4 9 5 7 6) `shouldNotSatisfy` isValid
+  let solved = parse "913584762257169483648723519136942857795816324824357196572638941489271635361495278"
 
-  describe "rowsValid" $ do
-    it "returns true iff the rows made from 3 groups are all valid" $ do
-      let g1 = group 1 2 3 4 5 6 7 8 9
-          g2 = group 4 5 6 7 8 9 1 2 3
-          g3 = group 7 8 9 1 2 3 4 5 6
-      rowsValid g1 g2 g3 `shouldBe` True
+  describe "col" $ do
+    it "returns all the indexes in the same col without itself" $ do
+      col 0 `shouldBe` [9, 18..72]
 
-      let g1 = group 1 2 3 4 5 6 7 8 9
-          g2 = group 4 5 6 7 8 9 1 2 3
-          g3 = group 4 5 6 7 8 9 1 2 3
-      rowsValid g1 g2 g3 `shouldBe` False
+  describe "row" $ do
+    it "returns all the indexes in the same row without itself" $ do
+      row 0 `shouldBe` [1..8]
 
-  describe "colsValid" $ do
-    it "returns true iff the rows made from 3 groups are all valid" $ do
-      let g1 = group 1 2 3 4 5 6 7 8 9
-          g2 = group 2 3 4 5 6 7 8 9 1
-          g3 = group 3 4 5 6 7 8 9 1 2
-      colsValid g1 g2 g3 `shouldBe` True
+  describe "group" $ do
+    it "returns all the indexes in the same group without itslef" $ do
+      S.fromList (group 0) `shouldBe` S.fromList [1, 2, 9, 10, 11, 18, 19, 20]
 
-      let g1 = group 1 2 3 4 5 6 7 8 9
-          g2 = group 4 5 6 7 8 9 1 2 3
-          g3 = group 4 5 6 7 8 9 1 2 3
-      colsValid g1 g2 g3 `shouldBe` False
+  describe "canUpdate" $ do
+    it "can update a grid a the given index with the given value" $ do
+      let g = parse ".23456789........................................................................"
+      canUpdate g 0 1 `shouldBe` True
 
-  describe "genGroups" $ do
-    it "generates valid groups with no holes from a group with holes" $ do
-      let g = [V.fromList [Just 1, Just 2, Just 3, Just 4, Just 5, Just 6, Just 7, Nothing, Nothing]]
-      let actual = S.fromList (genGroups g [])
-          exp = S.fromList [ group 1 2 3 4 5 6 7 8 9
-                           , group 1 2 3 4 5 6 7 9 8
-                           ]
-      actual `shouldBe` exp
+      -- same row
+      let g = parse ".13456789........................................................................"
+      canUpdate g 0 1 `shouldBe` False
 
-group :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Group
-group a b c d e f g h i =
-  V.fromList $ map Just [a, b, c, d, e, f, g, h, i]
+      -- same column
+      let g = parse ".23456789.........1.............................................................."
+      canUpdate g 0 1 `shouldBe` False
+
+      -- same group
+      let g = parse ".23456789.1......................................................................"
+      canUpdate g 0 1 `shouldBe` False
+
+      -- all
+      let g = solved // [(80, Empty)]
+      canUpdate g 80 8 `shouldBe` True
+
+  describe "step" $ do
+    it "solves the problem" $ do
+      let g = solved // [(80, Empty)]
+      step g 80 8 `shouldBe` (solved // [(80, Filled 8)])
+
+      let g = solved // [(0, Empty)]
+      step g 0 9 `shouldBe` (solved // [(0, Filled 9)])
+
+      let g = solved // [(0, Empty), (1, Empty), (80, Empty)]
+      step g 0 1 `shouldBe` (solved // [(0, Filled 9), (1, Filled 1), (80, Filled 8)])
+
+  describe "backtrack" $ do
+    it "goes back one step to try other solution" $ do
+      let g = solved // [(79, Filled 6), (80, Empty)]
+      backtrack g 80 `shouldBe` (solved // [(79, Filled 7), (80, Filled 8)])
